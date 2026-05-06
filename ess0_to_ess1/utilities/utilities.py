@@ -1,35 +1,43 @@
 from pyspark.sql import functions as F
-from pyspark.sql.functions import col, from_json, current_timestamp
-from pyspark.sql.types import StructType, StructField, StringType
-import yaml 
-from pyspark.sql.types import *
+from pyspark.sql.functions import col, lit, to_json
+from pyspark.sql.types import StringType, IntegerType, DoubleType, BooleanType, StructType, StructField, TimestampType, LongType, FloatType
+import yaml
 
 
-def odcs_to_pyspark_schema(yml_path):
-    with open(yml_path, 'r') as file:
-        contract = yaml.safe_load(file)
-    
-    # Mapping ODCS logical types to PySpark types
-    type_mapping = {
+def get_dynamic_projections(yaml_path):
+    """
+    Parses the YAML and returns a list of Spark Column expressions 
+    mapping sourcePath to name with correct type casting.
+    """
+    # Type mapping for casting
+    TYPE_MAPPING = {
         "string": StringType(),
+        "double": DoubleType(),
+        "float": FloatType(),
         "integer": IntegerType(),
-        "number": DoubleType(), # Or DecimalType(10,2) based on physicalType
-        "date": DateType(),
-        "boolean": BooleanType(),
-        "timestamp": TimestampType()
+        "long": LongType(),
+        "boolean": BooleanType()
     }
+
+    with open(yaml_path, 'r') as file:
+        config = yaml.safe_load(file)
+
+    properties = config.get('schema', [{}])[0].get('properties', [])
     
-    fields = []
-    
-    # ODCS v3 structure: schema is a list, we take the first table ('orders')
-    properties = contract['schema'][0]['properties']
-    
+    expressions = []
     for prop in properties:
-        name = prop['name']
-        logical_type = prop.get('logicalType', 'string')
-        # Check if the field is marked as required (nullable = not required)
-        nullable = not prop.get('required', False)     
-        spark_type = type_mapping.get(logical_type.lower(), StringType())       
-        fields.append(StructField(name, spark_type, nullable))
-   
-    return StructType(fields)
+        name = prop.get('name')
+        source_path = prop.get('sourcePath')
+        p_type = prop.get('physicalType', 'string').lower()
+        spark_type = TYPE_MAPPING.get(p_type, StringType())
+
+        if source_path:
+            # Create a column expression from the source path and cast it
+            expr = F.col(source_path).cast(spark_type).alias(name)
+        else:
+            # Handle null sourcePaths by creating a null literal of the correct type
+            expr = F.lit(None).cast(spark_type).alias(name)
+        
+        expressions.append(expr)
+        
+    return expressions
