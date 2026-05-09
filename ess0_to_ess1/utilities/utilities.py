@@ -4,7 +4,7 @@ from pyspark.sql.types import StringType, IntegerType, DoubleType, BooleanType, 
 import yaml
 
 
-def get_dynamic_projections(yaml_path):
+def get_dynamic_expressions(properties):
     """
     Parses the YAML and returns a list of Spark Column expressions 
     mapping sourcePath to name with correct type casting.
@@ -18,11 +18,6 @@ def get_dynamic_projections(yaml_path):
         "long": LongType(),
         "boolean": BooleanType()
     }
-
-    with open(yaml_path, 'r') as file:
-        config = yaml.safe_load(file)
-
-    properties = config.get('schema', [{}])[0].get('properties', [])
     
     expressions = []
     for prop in properties:
@@ -41,3 +36,31 @@ def get_dynamic_projections(yaml_path):
         expressions.append(expr)
         
     return expressions
+
+def data_contract_list():
+    file_path = "/Volumes/places/enterprise_steady_state/ess0_linz_json/linz_data_contract/linz_data_contract_prototype.yml"
+
+    with open(file_path, "r") as f:
+        contract = yaml.safe_load(f)
+    
+    schema_list = []
+
+    # Iterate through each schema defined in the file
+    for item in contract.get('schema', []):
+            # Extract the requested fields at the same level
+            schema_details = {
+                'name': item.get('name'),
+                'contract_path': item.get('contract_path'),
+                'source': item.get('source'),
+                'volume': item.get('volume'),
+                'table_name': item.get('table_name'),
+                'folder': item.get('folder'),
+                'schema': item.get('schema'),
+                'key': item.get('key'),
+                'properties': item.get('properties', [])
+            }
+            schema_list.append(schema_details)
+
+    return(schema_list)
+    
+        
