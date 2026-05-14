@@ -1,11 +1,12 @@
-import requests
 import json
 from pyspark import pipelines as dp
 from pyspark.sql import functions as F
 from pyspark.sql.functions import col, lit, to_json
 from pyspark.sql.types import StringType, IntegerType, DoubleType, BooleanType, StructType, StructField, TimestampType, LongType, FloatType
 from utilities.utilities import data_contract_list,get_dynamic_expressions, event_hook
+from pyspark.sql import SparkSession
 
+spark = SparkSession.builder.getOrCreate()
 
 def run_pipeline(data_contract_elements):
     yaml_file = data_contract_elements['contract_path']
@@ -57,7 +58,7 @@ def run_pipeline(data_contract_elements):
 # Event hook registered once at module level
 @dp.on_event_hook
 def slack_event_hook(event):
-    event_hook(event)
+    event_hook(event, spark)
 
 
 data_contract_list = data_contract_list()

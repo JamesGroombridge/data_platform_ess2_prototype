@@ -5,7 +5,6 @@ from pyspark.sql import functions as F
 from pyspark.sql.functions import col, lit, to_json
 from pyspark.sql.types import StringType, IntegerType, DoubleType, BooleanType, StructType, StructField, TimestampType, LongType, FloatType
 from pyspark.dbutils import DBUtils
-from pyspark.sql import SparkSession
 
 
 def get_dynamic_expressions(properties):
@@ -68,11 +67,10 @@ def data_contract_list():
     return(schema_list)
     
 
-def event_hook(event):
+def event_hook(event,spark):
     try:
         if (event['event_type'] == 'update_progress'):
             # Get dbutils from spark context (required in pipeline files)          
-            spark = SparkSession.builder.getOrCreate()
             dbutils = DBUtils(spark)    
             # get secret from scope slack      
             slack_webhook_url = dbutils.secrets.get(scope="slack", key="webhook_url")
