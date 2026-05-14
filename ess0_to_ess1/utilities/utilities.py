@@ -1,7 +1,11 @@
+import yaml
+import requests
+import json
 from pyspark.sql import functions as F
 from pyspark.sql.functions import col, lit, to_json
 from pyspark.sql.types import StringType, IntegerType, DoubleType, BooleanType, StructType, StructField, TimestampType, LongType, FloatType
-import yaml
+from pyspark.dbutils import DBUtils
+from pyspark.sql import SparkSession
 
 
 def get_dynamic_expressions(properties):
@@ -63,4 +67,26 @@ def data_contract_list():
 
     return(schema_list)
     
+
+def event_hook(event):
+    try:
+        if (event['event_type'] == 'update_progress'):
+            # Get dbutils from spark context (required in pipeline files)          
+            spark = SparkSession.builder.getOrCreate()
+            dbutils = DBUtils(spark)    
+            # get secret from scope slack      
+            slack_webhook_url = dbutils.secrets.get(scope="slack", key="webhook_url")
+            # Convert event object to formatted string
+            event_type = event['event_type']
+            state = ''
+            if event_type == 'update_progress':
+                state = event['details']['update_progress']['state']
+            text = f"event type: {event_type} state: {state}"
+            payload = {"text": text}
+            headers = {'Content-Type': 'application/json'}
+            # send to slack
+            response = requests.post(slack_webhook_url, headers=headers, json=payload, timeout=5)
+    except Exception as e:
+        print(f"Error sending Slack message: {e}")
+
         

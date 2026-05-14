@@ -1,9 +1,10 @@
-import yaml
+import requests
+import json
 from pyspark import pipelines as dp
 from pyspark.sql import functions as F
 from pyspark.sql.functions import col, lit, to_json
 from pyspark.sql.types import StringType, IntegerType, DoubleType, BooleanType, StructType, StructField, TimestampType, LongType, FloatType
-from utilities.utilities import data_contract_list,get_dynamic_expressions
+from utilities.utilities import data_contract_list,get_dynamic_expressions, event_hook
 
 
 def run_pipeline(data_contract_elements):
@@ -42,7 +43,7 @@ def run_pipeline(data_contract_elements):
 
     # Define the streaming table - schema inferred from query
     dp.create_streaming_table(
-        name=f"places.enterprise_steady_state.{table_name}",
+        name=f"places.enterprise_steady_state.{volume}",
         comment="LINZ data table with full history tracking (SCD Type 2)"
     )
 
@@ -52,6 +53,12 @@ def run_pipeline(data_contract_elements):
         keys=[key],
         sequence_by="processing_timestamp",
         stored_as_scd_type=2)
+
+# Event hook registered once at module level
+@dp.on_event_hook
+def slack_event_hook(event):
+    event_hook(event)
+
 
 data_contract_list = data_contract_list()
 for data_contract_element in data_contract_list:
