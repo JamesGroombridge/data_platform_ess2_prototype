@@ -6,6 +6,7 @@ from pyspark.sql.types import StringType, IntegerType, DoubleType, BooleanType, 
 from utilities.utilities import data_contract_list,get_dynamic_expressions, event_hook
 from pyspark.sql import SparkSession
 
+# set up spark session once for reuse
 spark = SparkSession.builder.getOrCreate()
 
 def run_pipeline(data_contract_elements):
