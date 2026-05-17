@@ -9,6 +9,9 @@ from pyspark.sql import SparkSession
 # set up spark session once for reuse
 spark = SparkSession.builder.getOrCreate()
 
+# validation rules
+VALIDATION_RULE = """feature_id IS NOT NULL AND TRIM(feature_id) != ''"""
+
 def run_pipeline(data_contract_elements):
     yaml_file = data_contract_elements['contract_path']
     properties = data_contract_elements['properties']
@@ -43,6 +46,25 @@ def run_pipeline(data_contract_elements):
         )
         return df
 
+    # Quarantine table for records that fail validation
+    @dp.table(
+        name=f"places.enterprise_steady_state.{volume}_quarantine",
+        comment="Records the data that failed the quality validation"
+    )
+    def quarantine_table():
+        return (
+            spark.readStream.table(source)
+            .filter(f"NOT ({VALIDATION_RULE})")
+            .withColumn("quarantine_timestamp", F.current_timestamp())
+            .withColumn("validation_rule_failed", lit(VALIDATION_RULE))
+        )
+
+    # Validated view - drops invalid records before CDC
+    @dp.temporary_view(name=f"{source}_validated")
+    @dp.expect_or_drop("valid_id", VALIDATION_RULE)
+    def validated_view():
+        return spark.readStream.table(source)
+
     # Define the streaming table - schema inferred from query
     dp.create_streaming_table(
         name=f"places.enterprise_steady_state.{volume}",
@@ -51,10 +73,11 @@ def run_pipeline(data_contract_elements):
 
     dp.create_auto_cdc_flow(
         target=f"places.enterprise_steady_state.{volume}",
-        source=source,
+        source=f"{source}_validated",
         keys=[key],
         sequence_by="processing_timestamp",
         stored_as_scd_type=2)
+
 
 # Event hook registered once at module level
 @dp.on_event_hook

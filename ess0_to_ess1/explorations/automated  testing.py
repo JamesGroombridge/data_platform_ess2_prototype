@@ -4,6 +4,10 @@
 
 # COMMAND ----------
 
+# MAGIC %md property_unit_of_property insert __change__ to base
+
+# COMMAND ----------
+
 # DBTITLE 1,Cell 2
 import json
 from datetime import datetime
@@ -33,6 +37,10 @@ def base_to_changeset(change_type):
         print(f"Error: {e}")
 
 base_to_changeset("INSERT")
+
+# COMMAND ----------
+
+# MAGIC %md nz_builing_outline insert __change__ to base
 
 # COMMAND ----------
 
@@ -72,6 +80,10 @@ base_to_changeset("INSERT")
 
 # COMMAND ----------
 
+# MAGIC %md nz_property_unit_of_property modify change to test insert-update-delete
+
+# COMMAND ----------
+
 import json
 from datetime import datetime
 
@@ -99,7 +111,11 @@ def changeset_to_changeset(change_type, input_name):
     except Exception as e:
         print(f"Error: {e}")
 
-changeset_to_changeset("UPDATE", "property_unit_of_property_changeset_5_2026-05-09_02-43-03.json")
+changeset_to_changeset("UPDATE", "property_unit_of_property_changeset_5_2026-05-17_00-32-18.json")
+
+# COMMAND ----------
+
+# MAGIC %md nz_builing_outline modify change to test insert-update-delete
 
 # COMMAND ----------
 
@@ -130,4 +146,4 @@ def changeset_to_changeset(change_type, input_name):
     except Exception as e:
         print(f"Error: {e}")
 
-changeset_to_changeset("UPDATE", "nz_buliding_outline_changeset_5_2026-05-09_03-34-09.json")
+changeset_to_changeset("UPDATE", "nz_buliding_outline_changeset_5_2026-05-17_00-32-28.json")
