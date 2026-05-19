@@ -3,11 +3,19 @@ from pyspark import pipelines as dp
 from pyspark.sql import functions as F
 from pyspark.sql.functions import col, lit, to_json
 from pyspark.sql.types import StringType, IntegerType, DoubleType, BooleanType, StructType, StructField, TimestampType, LongType, FloatType
-from utilities.utilities import data_contract_list,get_dynamic_expressions, event_hook
+from pyspark.sql.functions import col
 from pyspark.sql import SparkSession
+from utilities.utility_datacontract import data_contract_list,get_dynamic_expressions
+from utilities.utility_logging import event_hook, PipelineLogger
+
 
 # set up spark session once for reuse
 spark = SparkSession.builder.getOrCreate()
+
+# intialise logger
+logger = PipelineLogger(spark=spark, dataset_name="ess1")
+
+logger.log("Starting ess0 to ees1 pipeline", log_type="system")
 
 # validation rules
 VALIDATION_RULE = """feature_id IS NOT NULL AND TRIM(feature_id) != ''"""
@@ -23,7 +31,7 @@ def run_pipeline(data_contract_elements):
     schema = data_contract_elements['schema']
     key = data_contract_elements['key']
     
-   
+
     @dp.temporary_view(name=source)
     def temp_view():
         df_raw = (
