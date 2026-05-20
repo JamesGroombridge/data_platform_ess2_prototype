@@ -6,39 +6,6 @@ from pyspark.sql.types import StringType, IntegerType, DoubleType, BooleanType, 
 
 
 
-def get_dynamic_expressions(properties):
-    """
-    Parses the YAML and returns a list of Spark Column expressions 
-    mapping sourcePath to name with correct type casting.
-    """
-    # Type mapping for casting
-    TYPE_MAPPING = {
-        "string": StringType(),
-        "double": DoubleType(),
-        "float": FloatType(),
-        "integer": IntegerType(),
-        "long": LongType(),
-        "boolean": BooleanType()
-    }
-    
-    expressions = []
-    for prop in properties:
-        name = prop.get('name')
-        source_path = prop.get('sourcePath')
-        p_type = prop.get('physicalType', 'string').lower()
-        spark_type = TYPE_MAPPING.get(p_type, StringType())
-
-        if source_path:
-            # Create a column expression from the source path and cast it
-            expr = F.col(source_path).cast(spark_type).alias(name)
-        else:
-            # Handle null sourcePaths by creating a null literal of the correct type
-            expr = F.lit(None).cast(spark_type).alias(name)
-        
-        expressions.append(expr)
-        
-    return expressions
-
 def data_contract_list():
     file_path = "/Volumes/places/enterprise_steady_state/ess0_linz_json/linz_data_contract/linz_data_contract_prototype.yml"
 
@@ -62,8 +29,41 @@ def data_contract_list():
                 'properties': item.get('properties', [])
             }
             schema_list.append(schema_details)
-
+    
     return(schema_list)
+
+
+def get_dynamic_expressions(properties):
+    # Type mapping for casting
+    TYPE_MAPPING = {
+        "string": StringType(),
+        "double": DoubleType(),
+        "float": FloatType(),
+        "integer": IntegerType(),
+        "long": LongType(),
+        "boolean": BooleanType()
+    }
+     
+    expressions = []
+    
+    for prop in properties:
+        name = prop.get('name')
+        source_path = prop.get('sourcePath')
+        p_type = prop.get('physicalType', 'string').lower()
+        spark_type = TYPE_MAPPING.get(p_type, StringType())
+
+        if source_path:
+            # Create a column expression from the source path and cast it
+            expr = F.col(source_path).cast(spark_type).alias(name)
+        else:
+            # Handle null sourcePaths by creating a null literal of the correct type
+            expr = F.lit(None).cast(spark_type).alias(name)
+        
+        expressions.append(expr)
+        
+    return expressions
+
+
     
 
         
