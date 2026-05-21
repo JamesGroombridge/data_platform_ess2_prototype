@@ -53,7 +53,7 @@ def run_pipeline(data_contract_elements):
 
     # Quarantine table for records that fail validation
     @dp.table(
-        name=f"places.enterprise_steady_state.{volume}_quarantine",
+        name=f"places.enterprise_steady_state.{table_name}_quarantine",
         comment="Records the data that failed the quality validation"
     )
     def quarantine_table():
@@ -72,13 +72,13 @@ def run_pipeline(data_contract_elements):
 
     # Define the streaming table - schema inferred from query
     dp.create_streaming_table(
-        name=f"places.enterprise_steady_state.{volume}",
+        name=f"places.enterprise_steady_state.{table_name}",
         comment="LINZ data table with full history tracking (SCD Type 2)"
     )
 
     # CDC flow
     dp.create_auto_cdc_flow(
-        target=f"places.enterprise_steady_state.{volume}",
+        target=f"places.enterprise_steady_state.{table_name}",
         source=f"{source}_validated",
         keys=[key],
         sequence_by="processing_timestamp",
