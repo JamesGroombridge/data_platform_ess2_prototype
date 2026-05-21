@@ -5,7 +5,8 @@ from pyspark.sql.types import StringType, IntegerType, DoubleType, BooleanType, 
 from pyspark.sql import SparkSession
 from pyspark.dbutils import DBUtils
 from utilities.utility_datacontract import data_contract_list,get_dynamic_expressions
-from utilities.utility_logging import event_hook
+from utilities.utility_events import event_hook
+
 
 
 # set up spark session once for reuse
