@@ -6,8 +6,18 @@ from pyspark.sql import SparkSession
 from pyspark.dbutils import DBUtils
 from utilities.utility_datacontract import data_contract_list,get_dynamic_expressions
 from utilities.utility_events import event_hook
+from utilities.utility_validation import validate_source_files
+from utilities.utility_logging import logger
 
 
+# start logger
+try:    
+    logger_instance = logger("pipeline_validation")
+    logger_instance.info(f"logger instance started")
+except Exception as e:
+    logger_instance.error(f"Logger instance failed: {e}")
+    print(f"Logger initialization failed: {e}. Using print fallback.")
+    logger_instance = None
 
 # set up spark session once for reuse
 spark = SparkSession.builder.getOrCreate()
@@ -15,6 +25,27 @@ spark = SparkSession.builder.getOrCreate()
 # validation rules
 VALIDATION_RULE = """feature_id IS NOT NULL AND TRIM(feature_id) != ''"""
 
+# get schemas from data contract
+try:
+    data_schema_list = data_contract_list()
+    logger_instance.info(f"Data schema from datacontract loaded successfully for {len(data_schema_list)} schemas")
+except Exception as e:
+    logger_instance.error(f"data schmea from datacontract faile: {e}. Using print fallback.")
+
+
+# pre pipeline validate files before processing
+try:
+    validation_passed = validate_source_files(data_schema_list, spark, logger_instance)
+    logger_instance.info(f"Pre-pipeline validation completed successfully for {len(data_schema_list)} schemas")
+except Exception as validation_error:
+    error_message = f"Pre-pipeline validation FAILED: {validation_error}"
+    if logger_instance:
+        logger_instance.error(error_message)
+    # Re-raise to fail the pipeline immediately
+    raise RuntimeError(f"Pipeline aborted due to validation failure: {validation_error}") from validation_error
+
+
+# run pipeline
 def run_pipeline(data_contract_elements):
     yaml_file = data_contract_elements['contract_path']
     properties = data_contract_elements['properties']
@@ -34,7 +65,7 @@ def run_pipeline(data_contract_elements):
         df_raw = (
         spark.readStream.format("cloudFiles")
         .option("cloudFiles.format", "json")
-        .option("cloudFiles.schemaLocation", f"/Volumes/places/enterprise_steady_state/ess0_linz_json/_schema/{schema}")
+        .option("cloudFiles.maxFilesPerTrigger", "1")
         .option("multiLine", "true")
         .option("cloudFiles.inferColumnTypes", "true")
         .option("cloudFiles.schemaEvolutionMode", "addNewColumns")
@@ -85,12 +116,14 @@ def run_pipeline(data_contract_elements):
         stored_as_scd_type=2)
 
 
+# Run pipeline for each schema - only executes if validation passed
+for schema in data_schema_list:
+    run_pipeline(schema)
+
+
 # Event hook registered once at module level
 @dp.on_event_hook
 def slack_event_hook(event):
     event_hook(event, spark)
 
-# Execute pipeline definitions at module import time
-data_schema_list = data_contract_list()
-for schema in data_schema_list:
-    run_pipeline(schema)
+
