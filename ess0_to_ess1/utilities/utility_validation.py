@@ -23,7 +23,8 @@ def validate_source_files(data_contract_list, spark, logger_instance):
         # Check files exist
         try:
             files = dbutils.fs.ls(volume)
-            logger_instance.info(f"Found {len(files)} files for {name} in {volume}")            
+            logger_instance.info(f"Found {len(files)} files for {name} in {volume}")
+            logger_instance.metric(metric_type="completeness", metric_name="files_in_folder", value=len(files), expected=1, unit="Count", dimensions={"target_table": "ess0-ess1", "status": "success"})           
         except Exception as e:
             logger_instance.error(f"Cannot access volume for {name}: {volume}")
             raise Exception(f"Cannot access volume for {name}: {volume}") from e
