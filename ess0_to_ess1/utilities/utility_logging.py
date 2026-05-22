@@ -22,6 +22,7 @@ def config_operations_log():
         development_server = servers.get("development", {})
         log_name = development_server.get("log_name", "pipeline_operations")
         log_volume = development_server.get("log_volume", "")
+        metric_volume = development_server.get("metric_volume", "")
         log_level = development_server.get("log_level", "INFO")
         return {"log_name": log_name, "log_volume": log_volume, "log_level": log_level}
     except Exception as e:

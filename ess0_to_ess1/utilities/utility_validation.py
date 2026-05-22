@@ -1,44 +1,18 @@
-"""
-Pre-pipeline validation module
-Validates source files before pipeline execution
-"""
 from datetime import datetime, timezone
 from pyspark.sql import SparkSession
 from pyspark.dbutils import DBUtils
 
 
-def log_message(logger_instance, level, message):
-    """
-    Helper to log message via logger or print as fallback
-    """
-    if logger_instance:
-        if level == "info":
-            logger_instance.info(message)
-        elif level == "error":
-            logger_instance.error(message)
-    else:
-        # Fallback to print if no logger available
-        print(f"[{level.upper()}] {message}")
+# check all new files are avialble for pipeline to run - completeness
+# check files are appropriately sized - validity
+# check there is not duplicated files - uniqueness
+# log events to volume
+# log metrics to volume
+# trigger pipeline to run if criteria met
 
 
-def validate_source_files(data_contract_list, spark, logger_instance=None):
-    """
-    Validates source files for completeness, validity, and uniqueness
-    
-    Args:
-        data_contract_list: List of data contract dictionaries with 'name' and 'volume' keys
-        spark: SparkSession instance
-        logger_instance: Optional logger instance for logging
-    
-    Returns:
-        bool: True if all validations pass
-        
-    Raises:
-        Exception: If any validation fails
-    """
+def validate_source_files(data_contract_list, spark, logger_instance):
     dbutils = DBUtils(spark)
-    
-    log_message(logger_instance, "info", "Starting pre-pipeline file validation")
     
     current_time = datetime.now(timezone.utc)
     
@@ -49,17 +23,14 @@ def validate_source_files(data_contract_list, spark, logger_instance=None):
         # Check files exist
         try:
             files = dbutils.fs.ls(volume)
+            logger_instance.info(f"Found {len(files)} files for {name} in {volume}")            
         except Exception as e:
-            error_msg = f"Cannot access volume for {name}: {volume}"
-            log_message(logger_instance, "error", error_msg)
-            raise Exception(error_msg) from e
+            logger_instance.error(f"Cannot access volume for {name}: {volume}")
+            raise Exception(f"Cannot access volume for {name}: {volume}") from e
         
         if len(files) == 0:
-            error_msg = f"No files found for {name} in {volume}"
-            log_message(logger_instance, "error", error_msg)
-            raise Exception(error_msg)
-        
-        log_message(logger_instance, "info", f"{name} - {len(files)} files found")
+            logger_instance.error(f"No files found for {name} in {volume}")
+            raise Exception(f"No files found for {name} in {volume}")
         
         # Validate each file
         for file in files:
@@ -70,23 +41,18 @@ def validate_source_files(data_contract_list, spark, logger_instance=None):
             
             # Check file size
             if size_kb < 2:
-                error_msg = f"File {file.name} is less than 2KB for {name}"
-                log_message(logger_instance, "error", error_msg)
-                raise Exception(error_msg)
+                logger_instance.error(f"File {file.name} is less than 2KB for {name}")
+                raise Exception(f"File {file.name} is less than 2KB for {name}")
             
             # Check file age
             if age_days > 5:
-                error_msg = f"File {file.name} is older than 5 days for {name}"
-                log_message(logger_instance, "error", error_msg)
-                raise Exception(error_msg)
+                logger_instance.error(f"File {file.name} is older than 5 days for {name}")
+                raise Exception(f"File {file.name} is older than 5 days for {name}")
         
         # Check for duplicate files
         file_names = [file.name for file in files]
         if len(file_names) != len(set(file_names)):
-            error_msg = f"Duplicate files found for {name}"
-            log_message(logger_instance, "error", error_msg)
-            raise Exception(error_msg)
-    
-    log_message(logger_instance, "info", "Pre-pipeline file validation completed successfully")
+            logger_instance.error(f"Duplicate files found for {name}")
+            raise Exception(f"Duplicate files found for {name}")
     
     return True

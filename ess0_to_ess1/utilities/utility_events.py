@@ -3,7 +3,7 @@ import json
 from pyspark.dbutils import DBUtils
 
 
-def event_hook(event,spark):
+def event_hook(event,spark, logger_instance):
     try:
         if (event['event_type'] == 'update_progress'):
             # Get dbutils from spark context (required in pipeline files)
@@ -20,5 +20,6 @@ def event_hook(event,spark):
             headers = {'Content-Type': 'application/json'}
             # send to slack
             response = requests.post(slack_webhook_url, headers=headers, json=payload, timeout=5)
+            logger_instance.info(f"Slack messages sent {text}")
     except Exception as e:
         print(f"Error sending Slack message: {e}")

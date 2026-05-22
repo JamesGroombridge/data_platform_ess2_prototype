@@ -10,30 +10,30 @@ from utilities.utility_validation import validate_source_files
 from utilities.utility_logging import logger
 
 
-# start logger
+# pre pipeline - start logger
 try:    
     logger_instance = logger("pipeline_validation")
     logger_instance.info(f"logger instance started")
 except Exception as e:
     logger_instance.error(f"Logger instance failed: {e}")
-    print(f"Logger initialization failed: {e}. Using print fallback.")
-    logger_instance = None
+    raise
 
-# set up spark session once for reuse
+# pre pipeline set up spark session once for reuse
 spark = SparkSession.builder.getOrCreate()
 
-# validation rules
+# pre piepline - validation rules
 VALIDATION_RULE = """feature_id IS NOT NULL AND TRIM(feature_id) != ''"""
 
-# get schemas from data contract
+# pre pipeline - get schemas from data contract
 try:
-    data_schema_list = data_contract_list()
+    data_schema_list = data_contract_list(logger_instance)
     logger_instance.info(f"Data schema from datacontract loaded successfully for {len(data_schema_list)} schemas")
 except Exception as e:
-    logger_instance.error(f"data schmea from datacontract faile: {e}. Using print fallback.")
+    logger_instance.error(f"data schmea from datacontract failed: {e}. Using print fallback.")
+    raise
 
 
-# pre pipeline validate files before processing
+# pre pipeline - validate files before processing
 try:
     validation_passed = validate_source_files(data_schema_list, spark, logger_instance)
     logger_instance.info(f"Pre-pipeline validation completed successfully for {len(data_schema_list)} schemas")
@@ -57,7 +57,7 @@ def run_pipeline(data_contract_elements):
     key = data_contract_elements['key']
     
     # Get column projections
-    column_projections = get_dynamic_expressions(properties)
+    column_projections = get_dynamic_expressions(properties, logger_instance)
     
 
     @dp.temporary_view(name=source)
@@ -124,6 +124,6 @@ for schema in data_schema_list:
 # Event hook registered once at module level
 @dp.on_event_hook
 def slack_event_hook(event):
-    event_hook(event, spark)
+    event_hook(event, spark, logger_instance)
 
 
